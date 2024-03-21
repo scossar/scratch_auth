@@ -1,6 +1,5 @@
-import { createCookieSessionStorage } from "@remix-run/node";
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import bcrypt from "bcryptjs";
-import { AuthorizationError } from "remix-auth";
 import { db } from "./db.server";
 
 if (!process.env.SESSION_SECRET) {
@@ -11,7 +10,7 @@ const sessionSecret: string = process.env.SESSION_SECRET as string;
 
 export let sessionStorage = createCookieSessionStorage({
   cookie: {
-    name: "_session",
+    name: "z_session",
     sameSite: "lax",
     path: "/",
     httpOnly: true,
@@ -20,29 +19,54 @@ export let sessionStorage = createCookieSessionStorage({
   },
 });
 
-// The Remix Auth docs indicate that this is optional. I think
-// what that means is that either `sessionStorage` can be exported
-// as it is above, or the individual methods can be exported.
 export let { getSession, commitSession, destroySession } = sessionStorage;
 
+export async function createUserSession(userId: number, redirectTo: string) {
+  const session = await getSession();
+  session.set("userId", userId);
+  return redirect(redirectTo, {
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
+  });
+}
+
 interface LoginForm {
-  username: string;
+  usernameOrEmail: string;
   password: string;
 }
 
-export async function login({ username, password }: LoginForm) {
-  const user = await db.user.findUnique({
-    where: { username },
+interface LoginSuccess {
+  user: {
+    id: number;
+    usernameOrEmail: string;
+  };
+}
+
+interface LoginFailure {
+  fieldError: Record<string, string>;
+}
+
+type LoginResult = LoginSuccess | LoginFailure;
+
+export async function login({
+  usernameOrEmail,
+  password,
+}: LoginForm): Promise<LoginResult> {
+  const user = await db.user.findFirst({
+    where: {
+      OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+    },
   });
 
   if (!user) {
-    throw new AuthorizationError("Bad credentials: user not found.");
+    return { fieldError: { usernameOrEmail: "User not found" } };
   }
 
   const isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
   if (!isCorrectPassword) {
-    throw new AuthorizationError("Bad credentials: wrong password!");
+    return { fieldError: { password: "Incorrect password" } };
   }
 
-  return user;
+  return { user: { id: user.id, usernameOrEmail } };
 }
