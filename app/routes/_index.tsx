@@ -1,41 +1,34 @@
-import type { MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { Form, useLoaderData } from "@remix-run/react";
+import { authenticator } from "~/services/auth.server";
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const user = await authenticator.isAuthenticated(request);
+
+  return json({ user: user });
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  await authenticator.logout(request, {
+    redirectTo: "/login",
+  });
 };
 
 export default function Index() {
+  const { user } = useLoaderData<typeof loader>();
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+    <div>
+      <h1>Remix Auth Test</h1>
+      {user && (
+        <>
+          <p>Hey, you're logged in. Give logging out a try!</p>
+          <Form method="post">
+            <button type="submit">Logout</button>
+          </Form>
+        </>
+      )}
     </div>
   );
 }
