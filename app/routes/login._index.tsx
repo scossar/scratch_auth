@@ -59,7 +59,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function LoginForm() {
   const actionData = useActionData<typeof action>();
-  console.log(`actionData: ${JSON.stringify(actionData, null, 2)}`);
+  console.log(
+    `actionData.fieldErrors: ${JSON.stringify(
+      actionData?.fieldErrors,
+      null,
+      2
+    )}`
+  );
 
   return (
     <div>
