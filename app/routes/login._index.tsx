@@ -40,7 +40,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if ("fieldError" in loginReaponse) {
-    // fieldErrors.push(loginReaponse.fieldError);
     fieldError = loginReaponse.fieldError;
   } else {
     fieldError = null;
