@@ -3,7 +3,6 @@ import { json } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
 import LoginForm from "~/components/LoginForm";
-import type { FieldError } from "~/components/LoginForm";
 import { createUserSession, login } from "~/services/session.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {

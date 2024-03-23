@@ -5,8 +5,6 @@ interface Fields {
   password?: string;
 }
 
-//export type FieldError = Record<keyof Fields, string | undefined>;
-
 export interface FieldError {
   key: string;
   message: string;
