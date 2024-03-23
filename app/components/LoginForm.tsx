@@ -1,17 +1,11 @@
 import type { FetcherWithComponents } from "@remix-run/react";
 
-interface Fields {
-  usernameOrEmail?: string;
-  password?: string;
-}
-
 export interface FieldError {
   key: string;
   message: string;
 }
 
 export interface LoginFetcher {
-  fields?: Fields | null;
   fieldError?: FieldError | null;
   formError?: string | null;
 }
@@ -26,7 +20,6 @@ export default function LoginForm({ fetcher }: LoginProps) {
     emailOrUsernameErrorMessage,
     passwordError = false,
     passwordErrorMessage,
-    fields,
     formError;
   if (fetcherData) {
     emailOrUsernameError =
@@ -39,8 +32,15 @@ export default function LoginForm({ fetcher }: LoginProps) {
       ? fetcherData?.fieldError?.message
       : null;
     formError = fetcherData?.formError;
-    fields = fetcherData?.fields;
   }
+
+  const handleInput = (event: React.FormEvent<HTMLInputElement>) => {
+    const value = event.currentTarget.value;
+    fetcher.submit(
+      { usernameOrEmail: value, password: "password_needed" },
+      { action: "/login", method: "post" }
+    );
+  };
 
   return (
     <div>
@@ -55,7 +55,7 @@ export default function LoginForm({ fetcher }: LoginProps) {
           type="text"
           id="username-or-email"
           name="usernameOrEmail"
-          // defaultValue={fields?.usernameOrEmail}
+          onInput={handleInput}
           aria-invalid={emailOrUsernameError}
           aria-errormessage={
             emailOrUsernameErrorMessage ? emailOrUsernameErrorMessage : ""
@@ -70,7 +70,6 @@ export default function LoginForm({ fetcher }: LoginProps) {
           type="password"
           id="password"
           name="password"
-          // defaultValue={fields?.password}
           aria-invalid={passwordError}
           aria-errormessage={passwordErrorMessage ? passwordErrorMessage : ""}
         />
@@ -79,8 +78,7 @@ export default function LoginForm({ fetcher }: LoginProps) {
         )}
         {formError && (
           <div className="border border-red-500 p-2 my-2 rounded-sm text-sm">
-            {formError} // warning 'FormError is not assignable to type
-            ReactNode'
+            {formError}
           </div>
         )}
 

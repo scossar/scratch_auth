@@ -10,6 +10,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const form = await request.formData();
   const usernameOrEmail = form.get("usernameOrEmail");
   const password = form.get("password");
+  console.log("action called from form?");
 
   if (typeof usernameOrEmail !== "string" || typeof password !== "string") {
     return json(
