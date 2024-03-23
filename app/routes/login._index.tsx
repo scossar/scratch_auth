@@ -1,10 +1,10 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
-import { Form, Link, useActionData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import { useActionData } from "@remix-run/react";
 
 import LoginForm from "~/components/LoginForm";
-
+import type { FieldError } from "~/components/LoginForm";
 import { createUserSession, login } from "~/services/session.server";
-import { badRequest } from "~/services/request.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const form = await request.formData();
@@ -12,12 +12,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const password = form.get("password");
 
   if (typeof usernameOrEmail !== "string" || typeof password !== "string") {
-    return badRequest({
-      fieldErrors: null,
-      fields: null,
-      formError: "Form not submitted correctly.",
-    });
+    return json(
+      {
+        fields: null,
+        fieldError: null,
+        formError: "Form not submitted correctly.",
+      },
+      { status: 400 }
+    );
   }
+
+  let user, fieldError, formError;
 
   const fields = {
     usernameOrEmail,
@@ -29,40 +34,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     password: password,
   });
 
-  let fieldError, user;
   if ("user" in loginReaponse) {
     user = loginReaponse.user;
-  } else if ("fieldError" in loginReaponse) {
-    fieldError = loginReaponse.fieldError;
+    return createUserSession(user.id, "/");
   }
 
-  if (user) {
-    return createUserSession(user.id, "/");
-  } else if (fieldError?.usernameOrEmail) {
-    return badRequest({
-      fieldErrors: fieldError,
-      fields,
-      formError: "User not found",
-    });
-  } else if (fieldError?.password) {
-    return badRequest({
-      fieldErrors: fieldError,
-      fields,
-      formError: "Wrong password",
-    });
+  if ("fieldError" in loginReaponse) {
+    // fieldErrors.push(loginReaponse.fieldError);
+    fieldError = loginReaponse.fieldError;
   } else {
-    return badRequest({
-      fieldErrors: null,
-      fields: null,
-      formError: "Something went wrong",
-    });
+    fieldError = null;
+    formError = "Something's gone wrong";
   }
+
+  return json(
+    {
+      fields: fields,
+      fieldError: fieldError,
+      formError: formError,
+    },
+    { status: 400 }
+  );
 };
 
 export default function Login() {
   const actionData = useActionData<typeof action>();
   const fields = actionData?.fields;
-  const fieldErrors = actionData?.fieldErrors;
+  const fieldError = actionData?.fieldError;
   const formError = actionData?.formError;
 
   return (
@@ -70,7 +68,7 @@ export default function Login() {
       <h1 className="text-2xl">Log In</h1>
       <LoginForm
         fields={fields}
-        fieldErrors={fieldErrors}
+        fieldError={fieldError}
         formError={formError}
       />
     </div>

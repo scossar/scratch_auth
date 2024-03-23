@@ -5,23 +5,29 @@ interface Fields {
   password?: string;
 }
 
-type FieldErrors = Record<keyof Fields, string | undefined>;
+//export type FieldError = Record<keyof Fields, string | undefined>;
 
-interface FormError {
-  formError?: string;
+export interface FieldError {
+  key: string;
+  message: string;
 }
 
 interface LoginProps {
-  fields?: Fields;
-  fieldErrors?: FieldErrors;
-  formError?: FormError;
+  fields?: Fields | null;
+  fieldError?: FieldError | null;
+  formError?: string | null;
 }
 
 export default function LoginForm({
   fields,
-  fieldErrors,
+  fieldError,
   formError,
 }: LoginProps) {
+  const emailErrorMessage =
+    fieldError?.key === "usernameOrEmail" ? fieldError?.message : undefined;
+  const passwordErrorMessage =
+    fieldError?.key === "password" ? fieldError?.message : undefined;
+
   return (
     <div>
       <Form
@@ -35,13 +41,11 @@ export default function LoginForm({
           id="username-or-email"
           name="usernameOrEmail"
           defaultValue={fields?.usernameOrEmail}
-          aria-invalid={Boolean(fieldErrors?.usernameOrEmail)}
-          aria-errormessage={
-            fieldErrors?.usernameOrEmail ? "Username or Email error" : ""
-          }
+          aria-invalid={Boolean(emailErrorMessage)}
+          aria-errormessage={emailErrorMessage}
         />
-        {fieldErrors?.usernameOrEmail && (
-          <p className="text-sm text-red-600">{fieldErrors.usernameOrEmail}</p>
+        {emailErrorMessage && (
+          <p className="text-sm text-red-600">{emailErrorMessage}</p>
         )}
         <label htmlFor="password">Password</label>
         <input
@@ -50,16 +54,16 @@ export default function LoginForm({
           id="password"
           name="password"
           defaultValue={fields?.password}
-          aria-invalid={Boolean(fieldErrors?.password)}
-          aria-errormessage={fieldErrors?.password ? "Password error" : ""}
+          aria-invalid={Boolean(passwordErrorMessage)}
+          aria-errormessage={passwordErrorMessage ? passwordErrorMessage : ""}
         />
-        {fieldErrors?.password && (
-          <p className="text-sm text-red-600">{fieldErrors.password}</p>
+        {passwordErrorMessage && (
+          <p className="text-sm text-red-600">{passwordErrorMessage}</p>
         )}
-        {formError?.formError && (
+        {formError && (
           <div className="border border-red-500 p-2 my-2 rounded-sm text-sm">
-            {formError.formError} // warning 'FormError is not assignable to
-            type ReactNode'
+            {formError} // warning 'FormError is not assignable to type
+            ReactNode'
           </div>
         )}
 

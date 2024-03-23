@@ -1,6 +1,7 @@
 import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import bcrypt from "bcryptjs";
 import { db } from "./db.server";
+import type { FieldError } from "~/components/LoginForm";
 
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable not set");
@@ -44,7 +45,7 @@ interface LoginSuccess {
 }
 
 interface LoginFailure {
-  fieldError: Record<string, string>;
+  fieldError: FieldError;
 }
 
 type LoginResult = LoginSuccess | LoginFailure;
@@ -60,12 +61,14 @@ export async function login({
   });
 
   if (!user) {
-    return { fieldError: { usernameOrEmail: "User not found" } };
+    return {
+      fieldError: { key: "usernameOrEmail", message: "User not found" },
+    };
   }
 
   const isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
   if (!isCorrectPassword) {
-    return { fieldError: { password: "Incorrect password" } };
+    return { fieldError: { key: "password", message: "Incorrect password" } };
   }
 
   return { user: { id: user.id, usernameOrEmail } };
