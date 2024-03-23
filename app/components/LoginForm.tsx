@@ -1,4 +1,4 @@
-import { Form } from "@remix-run/react";
+import type { FetcherWithComponents } from "@remix-run/react";
 
 interface Fields {
   usernameOrEmail?: string;
@@ -10,27 +10,44 @@ export interface FieldError {
   message: string;
 }
 
-interface LoginProps {
+export interface LoginFetcher {
   fields?: Fields | null;
   fieldError?: FieldError | null;
   formError?: string | null;
 }
 
-export default function LoginForm({
-  fields,
-  fieldError,
-  formError,
-}: LoginProps) {
-  const emailErrorMessage =
-    fieldError?.key === "usernameOrEmail" ? fieldError?.message : undefined;
-  const passwordErrorMessage =
-    fieldError?.key === "password" ? fieldError?.message : undefined;
+interface LoginProps {
+  fetcher: FetcherWithComponents<LoginFetcher>;
+}
+
+export default function LoginForm({ fetcher }: LoginProps) {
+  const fetcherData = fetcher.data;
+  let emailOrUsernameError = false,
+    emailOrUsernameErrorMessage,
+    passwordError = false,
+    passwordErrorMessage,
+    fields,
+    formError;
+  if (fetcherData) {
+    emailOrUsernameError =
+      fetcherData?.fieldError?.key === "usernameOrEmail" ? true : false;
+    emailOrUsernameErrorMessage = emailOrUsernameError
+      ? fetcherData?.fieldError?.message
+      : null;
+    passwordError = fetcherData?.fieldError?.key === "password" ? true : false;
+    passwordErrorMessage = passwordError
+      ? fetcherData?.fieldError?.message
+      : null;
+    formError = fetcherData?.formError;
+    fields = fetcherData?.fields;
+  }
 
   return (
     <div>
-      <Form
+      <fetcher.Form
         className="flex flex-col max-w-80 border border-slate-400 p-3"
         method="post"
+        action="/login"
       >
         <label htmlFor="username-or-email">Username or Email</label>
         <input
@@ -38,12 +55,14 @@ export default function LoginForm({
           type="text"
           id="username-or-email"
           name="usernameOrEmail"
-          defaultValue={fields?.usernameOrEmail}
-          aria-invalid={Boolean(emailErrorMessage)}
-          aria-errormessage={emailErrorMessage}
+          // defaultValue={fields?.usernameOrEmail}
+          aria-invalid={emailOrUsernameError}
+          aria-errormessage={
+            emailOrUsernameErrorMessage ? emailOrUsernameErrorMessage : ""
+          }
         />
-        {emailErrorMessage && (
-          <p className="text-sm text-red-600">{emailErrorMessage}</p>
+        {emailOrUsernameErrorMessage && (
+          <p className="text-sm text-red-600">{emailOrUsernameErrorMessage}</p>
         )}
         <label htmlFor="password">Password</label>
         <input
@@ -51,8 +70,8 @@ export default function LoginForm({
           type="password"
           id="password"
           name="password"
-          defaultValue={fields?.password}
-          aria-invalid={Boolean(passwordErrorMessage)}
+          // defaultValue={fields?.password}
+          aria-invalid={passwordError}
           aria-errormessage={passwordErrorMessage ? passwordErrorMessage : ""}
         />
         {passwordErrorMessage && (
@@ -70,7 +89,7 @@ export default function LoginForm({
             Login
           </button>
         </div>
-      </Form>
+      </fetcher.Form>
     </div>
   );
 }
