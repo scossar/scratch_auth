@@ -11,6 +11,20 @@ export const findUserByUsernameOrEmail = async (usernameOrEmail: string) => {
   return user;
 };
 
+export const findUserByEmail = async (email: string) => {
+  const user = await db.user.findUnique({
+    where: { email },
+  });
+  return user;
+};
+
+export const findUserByUsername = async (username: string) => {
+  const user = await db.user.findUnique({
+    where: { username },
+  });
+  return user;
+};
+
 interface RegistrationForm {
   email: string;
   username: string;

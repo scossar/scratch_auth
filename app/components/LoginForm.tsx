@@ -10,7 +10,6 @@ export interface FieldError {
 export interface LoginFetcher {
   fieldError?: FieldError | null;
   formError?: string | null;
-  usernameOrEmailExists?: boolean | null;
 }
 
 interface LoginProps {
@@ -39,23 +38,7 @@ export default function LoginForm({ fetcher, username }: LoginProps) {
       ? fetcherData?.fieldError?.message
       : null;
     formError = fetcherData?.formError;
-    usernameOrEmailNotFound = !fetcherData?.usernameOrEmailExists;
   }
-
-  const handleInput = debounce((value: string) => {
-    fetcher.load(
-      `/api/usernameOrEmailExists?usernameOrEmail=${encodeURIComponent(value)}`
-    );
-  }, 500);
-
-  // Get the input's value, then call the debounced handleInput function
-  // avoids issues with React's event pooling. Look into that more
-  // before using in production.
-  const debouncedInputHandler = (event: React.FormEvent<HTMLInputElement>) => {
-    // Extract the value right away, so it's not accessed asynchronously
-    const usernameOrEmail = event.currentTarget.value;
-    handleInput(usernameOrEmail);
-  };
 
   return (
     <div>
@@ -70,19 +53,17 @@ export default function LoginForm({ fetcher, username }: LoginProps) {
           type="text"
           id="username-or-email"
           name="usernameOrEmail"
-          onInput={debouncedInputHandler}
           aria-invalid={emailOrUsernameError}
           defaultValue={initiateLoginFor}
           aria-errormessage={
             emailOrUsernameErrorMessage ? emailOrUsernameErrorMessage : ""
           }
         />
-        {emailOrUsernameErrorMessage ||
-          (usernameOrEmailNotFound === true && (
-            <p className="text-sm text-red-600">
-              {emailOrUsernameErrorMessage || "User not found."}
-            </p>
-          ))}
+        {emailOrUsernameErrorMessage && (
+          <p className="text-sm text-red-600">
+            {emailOrUsernameErrorMessage || "User not found."}
+          </p>
+        )}
         <label htmlFor="password">Password</label>
         <input
           className="border border-slate-600 px-1"
