@@ -1,4 +1,5 @@
 import type { FetcherWithComponents } from "@remix-run/react";
+import { Link } from "@remix-run/react";
 import debounce from "~/services/debounce";
 
 export interface FieldError {
@@ -14,10 +15,12 @@ export interface LoginFetcher {
 
 interface LoginProps {
   fetcher: FetcherWithComponents<LoginFetcher>;
+  username?: string | null;
 }
 
-export default function LoginForm({ fetcher }: LoginProps) {
+export default function LoginForm({ fetcher, username }: LoginProps) {
   const fetcherData = fetcher.data;
+  const initiateLoginFor = username ? username : "";
   let emailOrUsernameError = false,
     emailOrUsernameErrorMessage,
     passwordError = false,
@@ -69,6 +72,7 @@ export default function LoginForm({ fetcher }: LoginProps) {
           name="usernameOrEmail"
           onInput={debouncedInputHandler}
           aria-invalid={emailOrUsernameError}
+          defaultValue={initiateLoginFor}
           aria-errormessage={
             emailOrUsernameErrorMessage ? emailOrUsernameErrorMessage : ""
           }
@@ -103,6 +107,12 @@ export default function LoginForm({ fetcher }: LoginProps) {
           </button>
         </div>
       </fetcher.Form>
+      <Link
+        className="text-sm text-sky-700 hover:underline"
+        to="/login?action=new_account"
+      >
+        Register a new account
+      </Link>
     </div>
   );
 }
