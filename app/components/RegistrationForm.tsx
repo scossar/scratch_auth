@@ -1,7 +1,9 @@
 import type { FetcherWithComponents } from "@remix-run/react";
 import { Link } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import debounce from "~/services/debounce";
+
+const validateEmailFormat = (email: string) => /\S+@\S+\.\S+/.test(email);
 
 export interface FieldError {
   key: string;
@@ -23,8 +25,8 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
   const fetcherData = fetcher.data;
   const [emailValue, setEmailValue] = useState("");
   const [usernameValue, setUsernameValue] = useState("");
-  let emailExists,
-    usernameExists,
+  let emailExists = false,
+    usernameExists = false,
     submitDisabled = false;
   if (fetcherData && fetcherData?.emailExists) {
     emailExists = fetcherData.emailExists;
@@ -36,12 +38,14 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
 
   const handleEmailInput = debounce(
     (email: string, username: string | null) => {
-      let currentUsername = username ? username : "";
-      fetcher.load(
-        `/api/usernameOrEmailExists?email=${encodeURIComponent(
-          email
-        )}&username=${encodeURIComponent(currentUsername)}`
-      );
+      if (validateEmailFormat(email)) {
+        let currentUsername = username ? username : "";
+        fetcher.load(
+          `/api/usernameOrEmailExists?email=${encodeURIComponent(
+            email
+          )}&username=${encodeURIComponent(currentUsername)}`
+        );
+      }
     },
     500
   );
@@ -56,16 +60,21 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
     const email = event.currentTarget.value;
     setEmailValue(email);
     handleEmailInput(email, usernameValue);
+    if (email && emailExists) {
+      emailExists = false;
+    }
   };
 
   const handleUsernameInput = debounce(
     (username: string, email: string | null) => {
-      const currentEmail = email ? email : "";
-      fetcher.load(
-        `/api/usernameOrEmailExists?username=${encodeURIComponent(
-          username
-        )}&email=${encodeURIComponent(currentEmail)}`
-      );
+      if (username.length > 2) {
+        const currentEmail = email ? email : "";
+        fetcher.load(
+          `/api/usernameOrEmailExists?username=${encodeURIComponent(
+            username
+          )}&email=${encodeURIComponent(currentEmail)}`
+        );
+      }
     },
     500
   );
@@ -76,6 +85,9 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
     const username = event.currentTarget.value;
     setUsernameValue(username);
     handleUsernameInput(username, emailValue);
+    if (username && usernameExists) {
+      usernameExists = false;
+    }
   };
 
   return (
