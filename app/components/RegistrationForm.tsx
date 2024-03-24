@@ -21,26 +21,30 @@ interface RegistraionProps {
 
 export default function RegistrationForm({ fetcher }: RegistraionProps) {
   const fetcherData = fetcher.data;
+  const [emailValue, setEmailValue] = useState("");
+  const [usernameValue, setUsernameValue] = useState("");
   let emailExists,
     usernameExists,
     submitDisabled = false;
   if (fetcherData && fetcherData?.emailExists) {
-    console.log(
-      `fetcherData and email exists: ${JSON.stringify(fetcherData, null, 2)}`
-    );
     emailExists = fetcherData.emailExists;
   }
   if (fetcherData && fetcherData?.usernameExists) {
-    console.log(
-      `fetcherData and username exists: ${JSON.stringify(fetcherData, null, 2)}`
-    );
     usernameExists = fetcherData.usernameExists;
   }
-  submitDisabled = Boolean(usernameExists || emailExists);
+  submitDisabled = Boolean(emailExists || usernameExists);
 
-  const handleEmailInput = debounce((value: string) => {
-    fetcher.load(`/api/emailExists?email=${encodeURIComponent(value)}`);
-  }, 500);
+  const handleEmailInput = debounce(
+    (email: string, username: string | null) => {
+      let currentUsername = username ? username : "";
+      fetcher.load(
+        `/api/usernameOrEmailExists?email=${encodeURIComponent(
+          email
+        )}&username=${encodeURIComponent(currentUsername)}`
+      );
+    },
+    500
+  );
 
   // Get the input's value, then call the debounced handleInput function
   // avoids issues with React's event pooling. Look into that more
@@ -50,18 +54,28 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
   ) => {
     // Extract the value right away, so it's not accessed asynchronously
     const email = event.currentTarget.value;
-    handleEmailInput(email);
+    setEmailValue(email);
+    handleEmailInput(email, usernameValue);
   };
 
-  const handleUsernameInput = debounce((value: string) => {
-    fetcher.load(`/api/usernameExists?username=${encodeURIComponent(value)}`);
-  }, 500);
+  const handleUsernameInput = debounce(
+    (username: string, email: string | null) => {
+      const currentEmail = email ? email : "";
+      fetcher.load(
+        `/api/usernameOrEmailExists?username=${encodeURIComponent(
+          username
+        )}&email=${encodeURIComponent(currentEmail)}`
+      );
+    },
+    500
+  );
 
   const debouncedUsernameInputHandler = (
     event: React.FormEvent<HTMLInputElement>
   ) => {
     const username = event.currentTarget.value;
-    handleUsernameInput(username);
+    setUsernameValue(username);
+    handleUsernameInput(username, emailValue);
   };
 
   return (

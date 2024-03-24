@@ -4,13 +4,17 @@ import { findUserByUsernameOrEmail } from "~/services/user";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const usernameOrEmail = url.searchParams.get("usernameOrEmail");
-  let user;
-  if (usernameOrEmail) {
-    user = await findUserByUsernameOrEmail(usernameOrEmail);
+  const email = url.searchParams.get("email");
+  let user, emailExists, usernameExists;
+  if (email) {
+    user = await findUserByUsernameOrEmail(email);
+    emailExists = user ? true : false;
+  }
+  const username = url.searchParams.get("username");
+  if (username) {
+    user = await findUserByUsernameOrEmail(username);
+    usernameExists = user ? true : false;
   }
 
-  const usernameOrEmailExists = user ? true : false;
-
-  return json({ usernameOrEmailExists: usernameOrEmailExists });
+  return json({ usernameExists: usernameExists, emailExists: emailExists });
 };
