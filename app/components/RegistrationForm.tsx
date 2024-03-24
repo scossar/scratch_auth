@@ -149,7 +149,7 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
         </div>
       </fetcher.Form>
       <Link className="text-sm text-sky-700 hover:underline" to="/login">
-        Login
+        Register
       </Link>
     </div>
   );

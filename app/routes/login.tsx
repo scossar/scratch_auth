@@ -15,6 +15,28 @@ import type { RegistrationFetcher } from "~/components/RegistrationForm";
 
 type LoginRegistrationFetcher = LoginFetcher | RegistrationFetcher;
 
+const validateUsername = (username: string) => {
+  const valid = username.length >= 3;
+  const message = valid
+    ? ""
+    : "Usernames must be at least three characters long.";
+  return { valid: valid, message: message };
+};
+
+const validateEmail = (email: string) => {
+  const valid = /\S+@\S+\.\S+/.test(email);
+  const message = valid ? "" : `${email} is not a valid email address.`;
+  return { valid: valid, message: message };
+};
+
+const validatePassword = (password: string) => {
+  // todo: validate max length too
+  const valid = password.length >= 8;
+  const message = valid ? "" : "Passwords must be at least 8 characters long.";
+  return { valid: valid, message: message };
+};
+
+// Used to conditionally render either Login or Registration form
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
@@ -26,14 +48,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
-  const formType = action === "new_account" ? "register" : "login";
+  const formType = action === "new_account" ? "register" : "login"; // Determines which form to process
   const form = await request.formData();
+  const usernameOrEmail = form.get("usernameOrEmail"); // Login form param
+  const password = form.get("password"); // Login and Registration form param
+  const email = form.get("email"); // Registration form param
+  const username = form.get("username"); // Registration form param
 
   switch (formType) {
     case "login":
-      const usernameOrEmail = form.get("usernameOrEmail");
-      const password = form.get("password");
-
       if (typeof usernameOrEmail !== "string" || typeof password !== "string") {
         return json(
           {
@@ -72,13 +95,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
 
     case "register":
-      const email = form.get("email");
-      const username = form.get("username");
-      const registrationPassword = form.get("password");
       if (
         typeof email !== "string" ||
         typeof username !== "string" ||
-        typeof registrationPassword !== "string"
+        typeof password !== "string"
       ) {
         return json(
           {
@@ -92,7 +112,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const registrationResponse = await registerUser({
         email: email,
         username: username,
-        password: registrationPassword,
+        password: password,
       });
 
       if ("user" in registrationResponse) {
