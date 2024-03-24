@@ -1,4 +1,5 @@
 import type { FetcherWithComponents } from "@remix-run/react";
+import debounce from "~/services/debounce";
 
 export interface FieldError {
   key: string;
@@ -8,6 +9,7 @@ export interface FieldError {
 export interface LoginFetcher {
   fieldError?: FieldError | null;
   formError?: string | null;
+  usernameOrEmailExists?: boolean | null;
 }
 
 interface LoginProps {
@@ -20,7 +22,9 @@ export default function LoginForm({ fetcher }: LoginProps) {
     emailOrUsernameErrorMessage,
     passwordError = false,
     passwordErrorMessage,
-    formError;
+    formError,
+    usernameOrEmailNotFound;
+
   if (fetcherData) {
     emailOrUsernameError =
       fetcherData?.fieldError?.key === "usernameOrEmail" ? true : false;
@@ -32,14 +36,22 @@ export default function LoginForm({ fetcher }: LoginProps) {
       ? fetcherData?.fieldError?.message
       : null;
     formError = fetcherData?.formError;
+    usernameOrEmailNotFound = !fetcherData?.usernameOrEmailExists;
   }
 
-  const handleInput = (event: React.FormEvent<HTMLInputElement>) => {
-    const value = event.currentTarget.value;
-    fetcher.submit(
-      { usernameOrEmail: value, password: "password_needed" },
-      { action: "/login", method: "post" }
+  const handleInput = debounce((value: string) => {
+    fetcher.load(
+      `/api/usernameOrEmailExists?usernameOrEmail=${encodeURIComponent(value)}`
     );
+  }, 500);
+
+  // Get the input's value, then call the debounced handleInput function
+  // avoids issues with React's event pooling. Look into that more
+  // before using in production.
+  const debouncedInputHandler = (event: React.FormEvent<HTMLInputElement>) => {
+    // Extract the value right away, so it's not accessed asynchronously
+    const usernameOrEmail = event.currentTarget.value;
+    handleInput(usernameOrEmail);
   };
 
   return (
@@ -55,15 +67,18 @@ export default function LoginForm({ fetcher }: LoginProps) {
           type="text"
           id="username-or-email"
           name="usernameOrEmail"
-          onInput={handleInput}
+          onInput={debouncedInputHandler}
           aria-invalid={emailOrUsernameError}
           aria-errormessage={
             emailOrUsernameErrorMessage ? emailOrUsernameErrorMessage : ""
           }
         />
-        {emailOrUsernameErrorMessage && (
-          <p className="text-sm text-red-600">{emailOrUsernameErrorMessage}</p>
-        )}
+        {emailOrUsernameErrorMessage ||
+          (usernameOrEmailNotFound === true && (
+            <p className="text-sm text-red-600">
+              {emailOrUsernameErrorMessage || "User not found."}
+            </p>
+          ))}
         <label htmlFor="password">Password</label>
         <input
           className="border border-slate-600 px-1"
