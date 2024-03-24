@@ -11,7 +11,10 @@ import RegistrationForm from "~/components/RegistrationForm";
 import { createUserSession, login } from "~/services/session.server";
 import { registerUser } from "~/services/user";
 import type { LoginFetcher } from "~/components/LoginForm";
-import type { RegistrationFetcher } from "~/components/RegistrationForm";
+import type {
+  FieldErrors,
+  RegistrationFetcher,
+} from "~/components/RegistrationForm";
 
 type LoginRegistrationFetcher = LoginFetcher | RegistrationFetcher;
 
@@ -93,8 +96,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         },
         { status: 400 }
       );
-
     case "register":
+      let fieldErrors: FieldErrors = {};
       if (
         typeof email !== "string" ||
         typeof username !== "string" ||
@@ -102,10 +105,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ) {
         return json(
           {
-            fieldError: null,
             formError: "Form not submitted correctly",
           },
           { status: 400 }
+        );
+      }
+
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
+        fieldErrors["email"] = emailValidation.message;
+      }
+      const usernameValidation = validateUsername(username);
+      if (!usernameValidation.valid) {
+        fieldErrors["username"] = usernameValidation.message;
+      }
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        fieldErrors["password"] = passwordValidation.message;
+      }
+
+      if (Object.keys(fieldErrors).length > 0) {
+        return json(
+          {
+            fieldErrors: fieldErrors,
+          },
+          {
+            status: 400,
+          }
         );
       }
 
@@ -121,6 +147,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
       }
 
+      // if this gets executed, something really has gone wrong
       return json({
         formError: "Something has gone wrong",
       });

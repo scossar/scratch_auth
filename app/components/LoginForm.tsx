@@ -1,6 +1,5 @@
 import type { FetcherWithComponents } from "@remix-run/react";
 import { Link } from "@remix-run/react";
-import debounce from "~/services/debounce";
 
 export interface FieldError {
   key: string;
@@ -24,8 +23,7 @@ export default function LoginForm({ fetcher, username }: LoginProps) {
     emailOrUsernameErrorMessage,
     passwordError = false,
     passwordErrorMessage,
-    formError,
-    usernameOrEmailNotFound;
+    formError;
 
   if (fetcherData) {
     emailOrUsernameError =

@@ -5,35 +5,45 @@ import debounce from "~/services/debounce";
 
 const validateEmailFormat = (email: string) => /\S+@\S+\.\S+/.test(email);
 
-export interface FieldError {
-  key: string;
-  message: string;
+export interface FieldErrors {
+  [key: string]: string | undefined;
 }
 
 export interface RegistrationFetcher {
-  fieldError?: FieldError | null;
+  //fieldErrors?: { string: string } | null;
+  fieldErrors?: FieldErrors | null;
   formError?: string | null;
   usernameExists?: boolean | null;
   emailExists?: boolean | null;
 }
 
-interface RegistraionProps {
+interface RegistrationProps {
   fetcher: FetcherWithComponents<RegistrationFetcher>;
 }
 
-export default function RegistrationForm({ fetcher }: RegistraionProps) {
+export default function RegistrationForm({ fetcher }: RegistrationProps) {
   const fetcherData = fetcher.data;
   const [emailValue, setEmailValue] = useState("");
   const [usernameValue, setUsernameValue] = useState("");
   let emailExists = false,
     usernameExists = false,
-    submitDisabled = false;
-  if (fetcherData && fetcherData?.emailExists) {
-    emailExists = fetcherData.emailExists;
+    submitDisabled = false,
+    fieldErrors: FieldErrors = {};
+
+  if (fetcherData) {
+    emailExists = fetcherData?.emailExists ?? false;
+    usernameExists = fetcherData?.usernameExists ?? false;
+    fieldErrors = fetcherData?.fieldErrors ?? {};
   }
-  if (fetcherData && fetcherData?.usernameExists) {
-    usernameExists = fetcherData.usernameExists;
-  }
+
+  console.log(
+    `fieldErrors from Registration Component: ${JSON.stringify(
+      fieldErrors,
+      null,
+      2
+    )}`
+  );
+
   submitDisabled = Boolean(emailExists || usernameExists);
 
   const handleEmailInput = debounce(
@@ -104,15 +114,19 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
           id="email"
           name="email"
           onInput={debouncedEmailInputHandler}
-          aria-invalid={false} // todo: set this conditionally
-          aria-errormessage="don't forget about this"
+          aria-invalid={Boolean(fieldErrors?.email)}
+          aria-errormessage={fieldErrors?.email ? fieldErrors.email : ""}
         />
-        {emailExists && (
-          <p className="text-sm text-red-600">
-            Email address taken. Try logging into your account?
-          </p>
-        )}
-
+        <div className="min-h-6">
+          {emailExists && (
+            <p className="text-sm text-red-600">
+              Email address taken. Try logging into your account?
+            </p>
+          )}
+          {fieldErrors?.email && (
+            <p className="text-sm text-red-600">{fieldErrors.email}</p>
+          )}
+        </div>
         <label htmlFor="username">Username</label>
         <input
           className="border border-slate-600 px-1"
@@ -120,12 +134,17 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
           id="username"
           name="username"
           onInput={debouncedUsernameInputHandler}
-          aria-invalid={false} // todo: set this conditionally
-          aria-errormessage="don't forget about this"
+          aria-invalid={Boolean(fieldErrors?.username)}
+          aria-errormessage={fieldErrors?.username ? fieldErrors.username : ""}
         />
-        {usernameExists && (
-          <p className="text-sm text-red-600">Username taken.</p>
-        )}
+        <div className="min-h-6">
+          {usernameExists && (
+            <p className="text-sm text-red-600">Username taken.</p>
+          )}
+          {fieldErrors?.username && (
+            <p className="text-sm text-red-600">{fieldErrors.username}</p>
+          )}
+        </div>
 
         <label htmlFor="password">Password</label>
         <input
@@ -133,9 +152,14 @@ export default function RegistrationForm({ fetcher }: RegistraionProps) {
           type="password"
           id="password"
           name="password"
-          aria-invalid={false} // todo: set this conditionally
-          aria-errormessage="don't forget about this"
+          aria-invalid={Boolean(fieldErrors?.password)}
+          aria-errormessage={fieldErrors?.password ? fieldErrors.password : ""}
         />
+        <div className="min-h-3">
+          {fieldErrors?.password && (
+            <p className="text-sm text-red-600">{fieldErrors.password}</p>
+          )}
+        </div>
         <div className="mt-4">
           <button
             disabled={submitDisabled}
