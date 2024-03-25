@@ -10,7 +10,6 @@ export interface FieldErrors {
 }
 
 export interface RegistrationFetcher {
-  //fieldErrors?: { string: string } | null;
   fieldErrors?: FieldErrors | null;
   formError?: string | null;
   usernameExists?: boolean | null;
@@ -23,11 +22,16 @@ interface RegistrationProps {
 
 export default function RegistrationForm({ fetcher }: RegistrationProps) {
   const fetcherData = fetcher.data;
-  const [emailValue, setEmailValue] = useState("");
-  const [usernameValue, setUsernameValue] = useState("");
+  // `emailFormValue` and `usernameFormValue` are set so that both `email` and `username`
+  // can be passed to `checkEmailExists` and `checkUsernameExists`
+  const [emailFormValue, setEmailFormValue] = useState("");
+  const [usernameFormValue, setUsernameFormValue] = useState("");
+  // allows `passwordValid` to be used to set the `submitDisabled` variable
+  const [passwordValid, setPasswordValid] = useState(false);
+
   let emailExists = false,
     usernameExists = false,
-    submitDisabled = false,
+    submitDisabled = true,
     fieldErrors: FieldErrors = {};
 
   if (fetcherData) {
@@ -36,17 +40,15 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
     fieldErrors = fetcherData?.fieldErrors ?? {};
   }
 
-  console.log(
-    `fieldErrors from Registration Component: ${JSON.stringify(
-      fieldErrors,
-      null,
-      2
-    )}`
+  submitDisabled = Boolean(
+    emailExists ||
+      usernameExists ||
+      !emailFormValue ||
+      !usernameFormValue ||
+      !passwordValid
   );
 
-  submitDisabled = Boolean(emailExists || usernameExists);
-
-  const handleEmailInput = debounce(
+  const checkEmailExists = debounce(
     (email: string, username: string | null) => {
       if (validateEmailFormat(email)) {
         let currentUsername = username ? username : "";
@@ -60,22 +62,7 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
     500
   );
 
-  // Get the input's value, then call the debounced handleInput function
-  // avoids issues with React's event pooling. Look into that more
-  // before using in production.
-  const debouncedEmailInputHandler = (
-    event: React.FormEvent<HTMLInputElement>
-  ) => {
-    // Extract the value right away, so it's not accessed asynchronously
-    const email = event.currentTarget.value;
-    setEmailValue(email);
-    handleEmailInput(email, usernameValue);
-    if (email && emailExists) {
-      emailExists = false;
-    }
-  };
-
-  const handleUsernameInput = debounce(
+  const checkUsernameExists = debounce(
     (username: string, email: string | null) => {
       if (username.length > 2) {
         const currentEmail = email ? email : "";
@@ -89,21 +76,38 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
     500
   );
 
-  const debouncedUsernameInputHandler = (
-    event: React.FormEvent<HTMLInputElement>
-  ) => {
+  // Get the input's value, then call the handleInput function
+  // avoids issues with React's event pooling. Look into that more
+  // before using in production.
+  const emailInputHandler = (event: React.FormEvent<HTMLInputElement>) => {
+    const email = event.currentTarget.value;
+    setEmailFormValue(email);
+    checkEmailExists(email, usernameFormValue);
+    // remove the `emailExists` warning when new text is entered
+    if (email && emailExists) {
+      emailExists = false;
+    }
+  };
+
+  const usernameInputHandler = (event: React.FormEvent<HTMLInputElement>) => {
     const username = event.currentTarget.value;
-    setUsernameValue(username);
-    handleUsernameInput(username, emailValue);
+    setUsernameFormValue(username);
+    checkUsernameExists(username, emailFormValue);
+    // remove the `usernameExists` warning when new text is entered
     if (username && usernameExists) {
       usernameExists = false;
     }
   };
 
+  const passwordInputHandler = (event: React.FormEvent<HTMLInputElement>) => {
+    const password = event.currentTarget.value;
+    setPasswordValid(password.length >= 8);
+  };
+
   return (
     <div>
       <fetcher.Form
-        className="flex flex-col max-w-80 border border-slate-400 p-3"
+        className="flex flex-col max-w-60 border border-slate-400 p-3"
         method="post"
         action="/login?action=new_account"
       >
@@ -113,14 +117,16 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
           type="email"
           id="email"
           name="email"
-          onInput={debouncedEmailInputHandler}
+          onInput={emailInputHandler}
+          minLength={5}
+          maxLength={320}
           aria-invalid={Boolean(fieldErrors?.email)}
           aria-errormessage={fieldErrors?.email ? fieldErrors.email : ""}
         />
         <div className="min-h-6">
           {emailExists && (
             <p className="text-sm text-red-600">
-              Email address taken. Try logging into your account?
+              Email address taken. Maybe you already have an account?
             </p>
           )}
           {fieldErrors?.email && (
@@ -133,7 +139,9 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
           type="text"
           id="username"
           name="username"
-          onInput={debouncedUsernameInputHandler}
+          onInput={usernameInputHandler}
+          minLength={3}
+          maxLength={60}
           aria-invalid={Boolean(fieldErrors?.username)}
           aria-errormessage={fieldErrors?.username ? fieldErrors.username : ""}
         />
@@ -146,12 +154,18 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
           )}
         </div>
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password">
+          Password <span className="text-sm">(min 8 characters)</span>
+        </label>
+        {/* note that 2FA is available but not enforced on the site */}
         <input
           className="border border-slate-600 px-1"
           type="password"
           id="password"
           name="password"
+          onInput={passwordInputHandler}
+          minLength={8}
+          maxLength={255}
           aria-invalid={Boolean(fieldErrors?.password)}
           aria-errormessage={fieldErrors?.password ? fieldErrors.password : ""}
         />
@@ -163,17 +177,19 @@ export default function RegistrationForm({ fetcher }: RegistrationProps) {
         <div className="mt-4">
           <button
             disabled={submitDisabled}
-            className={`border border-slate-600 w-16 ${
-              submitDisabled && "bg-slate-300"
+            className={`border border-sky-900 text-slate-50 px-2 py-1 rounded-sm ${
+              submitDisabled
+                ? "bg-slate-500 cursor-default"
+                : "bg-sky-800 cursor-pointer"
             }`}
             type="submit"
           >
-            Login
+            Register
           </button>
         </div>
       </fetcher.Form>
       <Link className="text-sm text-sky-700 hover:underline" to="/login">
-        Register
+        Log in
       </Link>
     </div>
   );
